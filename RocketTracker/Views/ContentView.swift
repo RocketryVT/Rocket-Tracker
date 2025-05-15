@@ -17,15 +17,29 @@ struct ContentView: View {
         let service = BluetoothService()
         _presenter = StateObject(wrappedValue: MainPresenter(bluetoothService: service))
     }
-    
+
     var body: some View {
-        NavigationStack {
+        if #available(iOS 16.0, *) {
+            // iOS 16+ implementation using NavigationStack
+            NavigationStack {
+                contentView
+            }
+        } else {
+            // iOS 15 implementation using NavigationView
+            NavigationView {
+                contentView
+            }
+            .navigationViewStyle(.stack)
+        }
+    }
+
+    private var contentView: some View {
             VStack(spacing: 0) {
                 // Header with connection status
                 connectionHeader
                 
                 // Map view showing location
-                if presenter.isConnected, let telemetry = presenter.telemetryData {
+                if let telemetry = presenter.telemetryData {
                     mapView(for: telemetry, presenter: presenter)
                 } else {
                     placeholderMapView
@@ -56,7 +70,6 @@ struct ContentView: View {
                     isPresented: $showDeviceSelector
                 )
             }
-        }
     }
     
     // Connection status header

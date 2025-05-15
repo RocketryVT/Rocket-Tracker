@@ -15,9 +15,23 @@ struct DeviceSelectorView: View {
     
     // Filter name to only show "RocketryAtVT Tracker" devices
     private let deviceName = "RocketryAtVT Tracker"
-    
+
     var body: some View {
-        NavigationStack {
+        if #available(iOS 16.0, *) {
+            // iOS 16+ implementation using NavigationStack
+            NavigationStack {
+                deviceContentView
+            }
+        } else {
+            // iOS 15 implementation using NavigationView
+            NavigationView {
+                deviceContentView
+            }
+            .navigationViewStyle(.stack)
+        }
+    }
+    
+    private var deviceContentView: some View {
             VStack {
                 if filteredDevices.isEmpty {
                     emptyStateView
@@ -50,7 +64,6 @@ struct DeviceSelectorView: View {
             .onDisappear {
                 presenter.stopScanning()
             }
-        }
     }
     
     // Filter devices to only show our target device

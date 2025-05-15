@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import CoreBluetooth
 import MapKit
+import CoreData
 
 class MainPresenter: ObservableObject {
     // Published properties for the view
@@ -15,12 +16,14 @@ class MainPresenter: ObservableObject {
         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
     )
     
-    // Service
+    // Services
     private let bluetoothService: BluetoothServiceProtocol
+    private let dataManager = TelemetryDataManager()
     private var cancellables = Set<AnyCancellable>()
     
     init(bluetoothService: BluetoothServiceProtocol) {
         self.bluetoothService = bluetoothService
+        dataManager.verifyDataStore()
         setupBindings()
     }
     
@@ -35,6 +38,9 @@ class MainPresenter: ObservableObject {
                 
                 // Update map coordinates if telemetry has valid location
                 if let telemetry = telemetry {
+
+                    self?.dataManager.logTelemetry(telemetry)
+
                     let coordinate = CLLocationCoordinate2D(
                         latitude: telemetry.lat,
                         longitude: telemetry.lon
@@ -69,10 +75,33 @@ class MainPresenter: ObservableObject {
     
     func disconnect() {
         bluetoothService.disconnect()
+        // Force any pending saves
+        self.dataManager.forceSave()
     }
     
     func getDiscoveredDevices() -> [(peripheral: CBPeripheral, rssi: NSNumber)] {
         // This could come from a published property as well
         return (bluetoothService as? BluetoothService)?.discoveredDevices ?? []
+    }
+
+    func getTelemetryRecords(from startDate: Date? = nil, to endDate: Date? = nil) -> [NSManagedObject] {
+        let records = dataManager.getTelemetryRecords(from: startDate, to: endDate)
+        print("Retrieved \(records.count) records for date range")
+        return records
+    }
+
+    func getAvailableDates() -> [Date] {
+        let dates = dataManager.getAvailableDates()
+        print("Retrieved \(dates.count) available dates")
+        return dates
+    }
+
+    func deleteOldRecords(olderThan date: Date) {
+        dataManager.deleteRecords(olderThan: date)
+    }
+
+    func deleteRecordsForDate(_ date: Date) {
+        print("MainPresenter: Deleting records for \(date)")
+        dataManager.deleteRecordsForDate(date)
     }
 }

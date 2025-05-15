@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F38809442DD57C6900EADF25 /* Serde in Frameworks */ = {isa = PBXBuildFile; productRef = F38809432DD57C6900EADF25 /* Serde */; };
+		F3CA11E02DD5C4FA002933DA /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = F3CA11DF2DD5C4FA002933DA /* SwiftProtobuf */; };
+		F3CA11E22DD5C4FA002933DA /* SwiftProtobufPluginLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = F3CA11E12DD5C4FA002933DA /* SwiftProtobufPluginLibrary */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,7 +32,6 @@
 		F388090F2DD57B7B00EADF25 /* Rocketry At VT.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Rocketry At VT.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		F388091F2DD57B7D00EADF25 /* RocketTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RocketTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F38809292DD57B7D00EADF25 /* RocketTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RocketTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F38809412DD57C4F00EADF25 /* Serde */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Serde; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -70,7 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F38809442DD57C6900EADF25 /* Serde in Frameworks */,
+				F3CA11E22DD5C4FA002933DA /* SwiftProtobufPluginLibrary in Frameworks */,
+				F3CA11E02DD5C4FA002933DA /* SwiftProtobuf in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,7 +95,6 @@
 		F38809062DD57B7B00EADF25 = {
 			isa = PBXGroup;
 			children = (
-				F38809412DD57C4F00EADF25 /* Serde */,
 				F38809112DD57B7B00EADF25 /* RocketTracker */,
 				F38809222DD57B7D00EADF25 /* RocketTrackerTests */,
 				F388092C2DD57B7D00EADF25 /* RocketTrackerUITests */,
@@ -132,7 +132,8 @@
 			);
 			name = RocketTracker;
 			packageProductDependencies = (
-				F38809432DD57C6900EADF25 /* Serde */,
+				F3CA11DF2DD5C4FA002933DA /* SwiftProtobuf */,
+				F3CA11E12DD5C4FA002933DA /* SwiftProtobufPluginLibrary */,
 			);
 			productName = RocketTracker;
 			productReference = F388090F2DD57B7B00EADF25 /* Rocketry At VT.app */;
@@ -217,7 +218,7 @@
 			mainGroup = F38809062DD57B7B00EADF25;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F38809422DD57C6900EADF25 /* XCLocalSwiftPackageReference "Serde" */,
+				F3CA11DE2DD5C4FA002933DA /* XCRemoteSwiftPackageReference "swift-protobuf" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F38809102DD57B7B00EADF25 /* Products */;
@@ -440,7 +441,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -453,7 +454,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 2.4;
+				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
 			name = Debug;
 		};
@@ -486,7 +487,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -499,7 +500,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 2.4;
+				XROS_DEPLOYMENT_TARGET = 2.0;
 			};
 			name = Release;
 		};
@@ -634,17 +635,27 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		F38809422DD57C6900EADF25 /* XCLocalSwiftPackageReference "Serde" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Serde;
+/* Begin XCRemoteSwiftPackageReference section */
+		F3CA11DE2DD5C4FA002933DA /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.29.0;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F38809432DD57C6900EADF25 /* Serde */ = {
+		F3CA11DF2DD5C4FA002933DA /* SwiftProtobuf */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = Serde;
+			package = F3CA11DE2DD5C4FA002933DA /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+		F3CA11E12DD5C4FA002933DA /* SwiftProtobufPluginLibrary */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3CA11DE2DD5C4FA002933DA /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobufPluginLibrary;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

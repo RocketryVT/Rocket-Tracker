@@ -7,6 +7,7 @@
 
 import CoreBluetooth
 import Combine
+import SwiftProtobuf
 
 protocol BluetoothServiceProtocol {
     var discoveredDevicesPublisher: Published<[(peripheral: CBPeripheral, rssi: NSNumber)]>.Publisher { get }
@@ -38,6 +39,8 @@ class BluetoothService: NSObject, BluetoothServiceProtocol, ObservableObject {
     private var dataCharacteristic: CBCharacteristic?
     
     // UUIDs
+//    private let serviceUUID = CBUUID(string: "10000000-0000-0000-0000-000000000000")
+//    private let dataCharUUID = CBUUID(string: "00000000-0000-0000-0000-000000000001")
     private let serviceUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001000003412")
     private let dataCharUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001001003412")
     
@@ -201,12 +204,9 @@ extension BluetoothService: CBPeripheralDelegate {
 
         // Enhanced debug logging
         let byteArray = [UInt8](data)
-        let hexString = data.map { String(format: "%02x", $0) }.joined(separator: " ")
         
         print("📲 RAW DATA [\(characteristic.uuid.uuidString)]:")
         print("  Bytes: \(byteArray)")
-        print("  Hex: \(hexString)")
-        print("  UTF8: \(String(data: data, encoding: .utf8) ?? "Not valid UTF8")")
         print("  Length: \(data.count) bytes")
         
         // Process data based on characteristic UUID
@@ -218,23 +218,77 @@ extension BluetoothService: CBPeripheralDelegate {
     // MARK: - Helper Methods
     
     private func processTelemetryData(_ data: Data) {
+        // Try parsing as protobuf first
         do {
-            // Convert data to string, trim null terminators
-            if let jsonString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(charactersIn: "\0")) {
-                let jsonData = jsonString.data(using: .utf8)!
-                let telemetry = try JSONDecoder().decode(TelemetryData.self, from: jsonData)
+            
+            let telemetry = try parseProtobufWithLengthPrefix(data: data)
+            
+            print("Protobuf parsing successful")
+            
+            // Convert the protobuf model to your app's data model
+            let appTelemetry = TelemetryData(
+                time_since_boot: Int(telemetry.timeSinceBoot),
+                msg_num: Int(telemetry.msgNum),
+                lat: telemetry.lat,
+                lon: telemetry.lon,
+                alt: telemetry.alt,
+                num_sats: Int(telemetry.numSats),
+                gps_fix: gpsFix(from: telemetry.gpsFix),
+                gps_time: UTCTime(
+                    itow: Int(telemetry.gpsTime.itow),
+                    time_accuracy_estimate_ns: Int(telemetry.gpsTime.timeAccuracyEstimateNs),
+                    year: Int(telemetry.gpsTime.year),
+                    month: Int(telemetry.gpsTime.month),
+                    day: Int(telemetry.gpsTime.day),
+                    hour: Int(telemetry.gpsTime.hour),
+                    min: Int(telemetry.gpsTime.min),
+                    sec: Int(telemetry.gpsTime.sec),
+                    nanos: Int(telemetry.gpsTime.nanos),
+                    valid: Int(telemetry.gpsTime.valid)
+                ),
+                baro_alt: Double(telemetry.baroAlt)
+            )
+            
+            DispatchQueue.main.async {
+                self.latestTelemetry = appTelemetry
                 
-                DispatchQueue.main.async {
-                    self.latestTelemetry = telemetry
-                    
-                    // Add simple formatted message
-                    let message = "Time: \(telemetry.time_since_boot), Lat: \(telemetry.lat), Lon: \(telemetry.lon)"
-                    self.addMessage(message)
-                }
+                // Add simple formatted message
+                let message = "Time: \(appTelemetry.time_since_boot), Lat: \(appTelemetry.lat), Lon: \(appTelemetry.lon)"
+                self.addMessage(message)
             }
+            return
         } catch {
-            print("Error parsing telemetry: \(error)")
+            // Not protobuf or error parsing, try JSON instead
+            print("Not a valid protobuf: \(error). Falling back to JSON")
         }
+    }
+
+    enum CustomError: Error {
+        case invalidLength
+        case invalidData
+        case parsingFailure
+    }
+    
+    private func parseProtobufWithLengthPrefix(data: Data) throws -> RKTMiniData {
+        guard data.count >= 2 else {
+            throw CustomError.invalidLength
+        }
+        
+        // Extract length (first two bytes, little endian)
+        let length = UInt16(data[0]) + (UInt16(data[1]) << 8)
+        print("Parsed length: \(length)")
+        
+        // Ensure length is valid
+        guard length > 0, length <= data.count - 2 else {
+            throw CustomError.invalidLength
+        }
+        
+        // Extract actual protobuf data using the length
+        let protobufData = data.subdata(in: 2..<(Int(length) + 2))
+        print("Extracted protobuf data: \(protobufData)")
+        
+        // Parse the protobuf data
+        return try RKTMiniData(serializedBytes: protobufData)
     }
     
     private func addMessage(_ message: String) {
@@ -246,5 +300,25 @@ extension BluetoothService: CBPeripheralDelegate {
                 self.receivedMessages.removeFirst()
             }
         }
+    }
+}
+
+// Helper function to convert RKTGpsFix enum to a String
+private func gpsFix(from fix: RKTGpsFix) -> String {
+    switch fix {
+    case .noFix:
+        return "No Fix"
+    case .deadReckoningOnly:
+        return "Dead Reckoning Only"
+    case .fix2D:
+        return "2D Fix"
+    case .fix3D:
+        return "3D Fix"
+    case .gpsPlusDeadReckoning:
+        return "GPS + Dead Reckoning"
+    case .timeOnlyFix:
+        return "Time Only Fix"
+    case .UNRECOGNIZED(let value):
+        return "Unknown (\(value))"
     }
 }
