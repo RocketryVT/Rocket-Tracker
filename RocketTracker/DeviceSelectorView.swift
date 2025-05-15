@@ -26,7 +26,9 @@ struct DeviceSelectorView: View {
                 }
             }
             .navigationTitle("Select Device")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {

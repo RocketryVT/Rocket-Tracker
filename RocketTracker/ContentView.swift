@@ -7,6 +7,9 @@
 
 import SwiftUI
 import MapKit
+//#if os(macOS)
+//import AppKit
+//#endif
 
 struct ContentView: View {
     @StateObject private var bluetoothManager = BluetoothManager()
@@ -35,6 +38,7 @@ struct ContentView: View {
             }
             .navigationTitle("Rocket Tracker")
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { showDeviceSelector = true }) {
                         Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
@@ -47,6 +51,20 @@ struct ContentView: View {
                         }
                     }
                 }
+                #else
+                ToolbarItem(placement: .automatic) {
+                    Button(action: { showDeviceSelector = true }) {
+                        Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
+                    }
+                }
+                ToolbarItem(placement: .automatic) {
+                    if bluetoothManager.isConnected {
+                        Button(action: { bluetoothManager.disconnect() }) {
+                            Label("Disconnect", systemImage: "xmark.circle")
+                        }
+                    }
+                }
+                #endif
             }
             .sheet(isPresented: $showDeviceSelector) {
                 DeviceSelectorView(bluetoothManager: bluetoothManager, isPresented: $showDeviceSelector)
@@ -72,7 +90,9 @@ struct ContentView: View {
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground))
+        // .background(Color(UIColor.secondarySystemBackground))
+        // .background(.regularMaterial)
+        .background(Color.secondary.opacity(0.0))
     }
     
     // Map view with location tracking
@@ -107,7 +127,8 @@ struct ContentView: View {
     // Placeholder map when not connected
     private var placeholderMapView: some View {
         ZStack {
-            Color(UIColor.secondarySystemBackground)
+            // Color(UIColor.secondarySystemBackground)
+            Color(Color.secondary.opacity(0.1))
             VStack {
                 Image(systemName: "map")
                     .font(.system(size: 50))
