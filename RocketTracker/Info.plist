@@ -6,5 +6,11 @@
 	<false/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Connects only to a companion RocketryAtVT Rocket Tracker Device. It only receives data from the bluetooth device and never transmits outside of your personal device/phone</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>"This app needs your location to show where you are in relation to the rocket."</string>
+	<key>NSLocationUsageDescription</key>
+	<string>"Your location is used to calculate distance and direction to the rocket."</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Used to provide directional guidance to the rocket.</string>
 </dict>
 </plist>
