@@ -1,106 +1,45 @@
 //
-//  BluetoothManager.swift
+//  BluetoothService.swift
 //  RocketTracker
 //
-//  Created by Gregory Wainer on 3/8/25.
+//  Created by Gregory Wainer on 5/14/25.
 //
 
 import CoreBluetooth
 import Combine
-import Foundation
 
-import Serde
-
-struct TelemetryData: Codable {
-    let time_since_boot: Int
-    let msg_num: Int
-    let lat: Double
-    let lon: Double
-    let alt: Double
-    let num_sats: Int
-    let gps_fix: String
-    let gps_time: UTCTime
-    let baro_alt: Double
+protocol BluetoothServiceProtocol {
+    var discoveredDevicesPublisher: Published<[(peripheral: CBPeripheral, rssi: NSNumber)]>.Publisher { get }
+    var connectionStatusPublisher: Published<Bool>.Publisher { get }
+    var telemetryPublisher: Published<TelemetryData?>.Publisher { get }
+    var messagesPublisher: Published<[ReceivedMessage]>.Publisher { get }
+    
+    func startScanning()
+    func stopScanning()
+    func connect(to peripheral: CBPeripheral)
+    func disconnect()
 }
 
-//struct TelemetryData: Codable {
-//    let time_since_boot: Int
-//    let msg_num: Int
-//    let lat: Double
-//    let lon: Double
-//    let alt: Double
-//    let num_sats: Int
-//    let gps_fix: String
-//    let gps_time: UTCTime
-//    let baro_alt: Double
-//    let ism_axel_x: Double
-//    let ism_axel_y: Double
-//    let ism_axel_z: Double
-//    let ism_gyro_x: Double
-//    let ism_gyro_y: Double
-//    let ism_gyro_z: Double
-//    let lsm_axel_x: Double
-//    let lsm_axel_y: Double
-//    let lsm_axel_z: Double
-//    let lsm_gyro_x: Double
-//    let lsm_gyro_y: Double
-//    let lsm_gyro_z: Double
-//    let adxl_axel_x: Double
-//    let adxl_axel_y: Double
-//    let adxl_axel_z: Double
-//    let ism_axel_x2: Double
-//    let ism_axel_y2: Double
-//    let ism_axel_z2: Double
-//    let ism_gyro_x2: Double
-//    let ism_gyro_y2: Double
-//    let ism_gyro_z2: Double
-//}
-
-struct UTCTime: Codable {
-    let itow: Int
-    let time_accuracy_estimate_ns: Int
-    let year: Int
-    let month: Int
-    let day: Int
-    let hour: Int
-    let min: Int
-    let sec: Int
-    let nanos: Int
-    let valid: Int
-}
-
-class BluetoothManager: NSObject, ObservableObject {
-    // MARK: - Published Properties
-    @Published var discoveredDevices: [(peripheral: CBPeripheral, rssi: NSNumber)] = []
-    @Published var isConnected = false
-    @Published var latestTelemetry: TelemetryData? // Holds the latest telemetry data received
-    @Published var receivedMessages: [ReceivedMessage] = []
+class BluetoothService: NSObject, BluetoothServiceProtocol, ObservableObject {
+    @Published private(set) var discoveredDevices: [(peripheral: CBPeripheral, rssi: NSNumber)] = []
+    @Published private(set) var isConnected = false
+    @Published private(set) var latestTelemetry: TelemetryData?
+    @Published private(set) var receivedMessages: [ReceivedMessage] = []
     @Published var isSending = false
+    
+    var discoveredDevicesPublisher: Published<[(peripheral: CBPeripheral, rssi: NSNumber)]>.Publisher { $discoveredDevices }
+    var connectionStatusPublisher: Published<Bool>.Publisher { $isConnected }
+    var telemetryPublisher: Published<TelemetryData?>.Publisher { $latestTelemetry }
+    var messagesPublisher: Published<[ReceivedMessage]>.Publisher { $receivedMessages }
     
     // MARK: - Private Properties
     private var centralManager: CBCentralManager!
     private var connectedDevice: CBPeripheral?
-    private var telemetryCharacteristic: CBCharacteristic?
     private var dataCharacteristic: CBCharacteristic?
     
-    // Important UUIDs - Updated to match Rust code
+    // UUIDs
     private let serviceUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001000003412")
     private let dataCharUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001001003412")
-    
-    // MARK: - Models
-    struct ReceivedMessage: Identifiable, Hashable {
-        let id = UUID()
-        let timestamp: Date
-        let message: String
-        
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(id)
-        }
-        
-        static func == (lhs: ReceivedMessage, rhs: ReceivedMessage) -> Bool {
-            return lhs.id == rhs.id
-        }
-    }
     
     // MARK: - Initialization
     override init() {
@@ -141,8 +80,7 @@ class BluetoothManager: NSObject, ObservableObject {
     }
 }
 
-// MARK: - CBCentralManagerDelegate
-extension BluetoothManager: CBCentralManagerDelegate {
+extension BluetoothService: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
         case .poweredOn:
@@ -191,7 +129,6 @@ extension BluetoothManager: CBCentralManagerDelegate {
         print("Disconnected from \(peripheral.name ?? "Unknown Device")")
         connectedDevice = nil
         dataCharacteristic = nil
-        telemetryCharacteristic = nil
         
         DispatchQueue.main.async {
             self.isConnected = false
@@ -204,7 +141,7 @@ extension BluetoothManager: CBCentralManagerDelegate {
 }
 
 // MARK: - CBPeripheralDelegate
-extension BluetoothManager: CBPeripheralDelegate {
+extension BluetoothService: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error = error {
             print("Error discovering services: \(error.localizedDescription)")

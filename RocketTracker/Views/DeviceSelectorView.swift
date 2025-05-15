@@ -10,7 +10,7 @@ import SwiftUI
 import CoreBluetooth
 
 struct DeviceSelectorView: View {
-    @ObservedObject var bluetoothManager: BluetoothManager
+    @ObservedObject var presenter: MainPresenter
     @Binding var isPresented: Bool
     
     // Filter name to only show "RocketryAtVT Tracker" devices
@@ -38,24 +38,24 @@ struct DeviceSelectorView: View {
                 
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: {
-                        bluetoothManager.startScanning()
+                        presenter.startScanning()
                     }) {
                         Label("Refresh", systemImage: "arrow.clockwise")
                     }
                 }
             }
             .onAppear {
-                bluetoothManager.startScanning()
+                presenter.startScanning()
             }
             .onDisappear {
-                bluetoothManager.stopScanning()
+                presenter.stopScanning()
             }
         }
     }
     
     // Filter devices to only show our target device
     private var filteredDevices: [(peripheral: CBPeripheral, rssi: NSNumber)] {
-        return bluetoothManager.discoveredDevices.filter {
+        return presenter.getDiscoveredDevices().filter {
             $0.peripheral.name?.contains(deviceName) ?? false
         }
     }
@@ -114,7 +114,7 @@ struct DeviceSelectorView: View {
     
     // Connect to selected device and close sheet
     private func connectToDevice(_ peripheral: CBPeripheral) {
-        bluetoothManager.connect(to: peripheral)
+        presenter.connect(to: peripheral)
         isPresented = false
     }
     
@@ -156,5 +156,7 @@ struct DeviceSelectorView: View {
 }
 
 #Preview {
-    DeviceSelectorView(bluetoothManager: BluetoothManager(), isPresented: .constant(true))
+    let service = BluetoothService()
+    let presenter = MainPresenter(bluetoothService: service)
+    return DeviceSelectorView(presenter: presenter, isPresented: .constant(true))
 }
