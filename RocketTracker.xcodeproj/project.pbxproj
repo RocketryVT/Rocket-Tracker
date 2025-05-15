@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F38809442DD57C6900EADF25 /* Serde in Frameworks */ = {isa = PBXBuildFile; productRef = F38809432DD57C6900EADF25 /* Serde */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		F38809202DD57B7D00EADF25 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		F388090F2DD57B7B00EADF25 /* RocketTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RocketTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F388091F2DD57B7D00EADF25 /* RocketTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RocketTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F38809292DD57B7D00EADF25 /* RocketTrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RocketTrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F38809412DD57C4F00EADF25 /* Serde */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Serde; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F38809442DD57C6900EADF25 /* Serde in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +81,7 @@
 		F38809062DD57B7B00EADF25 = {
 			isa = PBXGroup;
 			children = (
+				F38809412DD57C4F00EADF25 /* Serde */,
 				F38809112DD57B7B00EADF25 /* RocketTracker */,
 				F38809222DD57B7D00EADF25 /* RocketTrackerTests */,
 				F388092C2DD57B7D00EADF25 /* RocketTrackerUITests */,
@@ -112,6 +119,7 @@
 			);
 			name = RocketTracker;
 			packageProductDependencies = (
+				F38809432DD57C6900EADF25 /* Serde */,
 			);
 			productName = RocketTracker;
 			productReference = F388090F2DD57B7B00EADF25 /* RocketTracker.app */;
@@ -195,6 +203,9 @@
 			);
 			mainGroup = F38809062DD57B7B00EADF25;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F38809422DD57C6900EADF25 /* XCLocalSwiftPackageReference "Serde" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F38809102DD57B7B00EADF25 /* Products */;
 			projectDirPath = "";
@@ -593,6 +604,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F38809422DD57C6900EADF25 /* XCLocalSwiftPackageReference "Serde" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Serde;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F38809432DD57C6900EADF25 /* Serde */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Serde;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F38809072DD57B7B00EADF25 /* Project object */;
 }
