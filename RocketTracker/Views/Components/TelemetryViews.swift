@@ -11,90 +11,83 @@ import CoreData
 struct TelemetryDataView: View {
     @ObservedObject var presenter: MainPresenter
     @State private var showLogsSheet = false
+    @State private var selectedDeviceTab: UInt32?
     
     var body: some View {
-        ScrollView {
-            if presenter.isConnected {
-                HStack {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 10, height: 10)
-                        .padding(.trailing, 4)
-                    Text("Recording telemetry data")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
+        VStack {
+            // Device selector tabs (if multiple devices)
+            if presenter.getAvailableDeviceIDs().count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        Button(action: {
+                            selectedDeviceTab = nil
+                            presenter.selectDevice(nil)
+                        }) {
+                            Text("All Devices")
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 12)
+                                .background((selectedDeviceTab == nil) ? Color.blue : Color.gray.opacity(0.2))
+                                .cornerRadius(16)
+                                .foregroundColor((selectedDeviceTab == nil) ? .white : .primary)
+                        }
+                        
+                        ForEach(presenter.getAvailableDeviceIDs(), id: \.self) { deviceID in
+                            Button(action: {
+                                selectedDeviceTab = deviceID
+                                presenter.selectDevice(deviceID)
+                            }) {
+                                Text("Device \(deviceID)")
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 12)
+                                    .background((selectedDeviceTab == deviceID) ? Color.blue : Color.gray.opacity(0.2))
+                                    .cornerRadius(16)
+                                    .foregroundColor((selectedDeviceTab == deviceID) ? .white : .primary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
-                .padding(.top, 4)
             }
-            if let telemetry = presenter.telemetryData {
-                VStack(alignment: .leading, spacing: 12) {                
-                    GroupBox(label: Label("GPS Data", systemImage: "location.fill")) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            DataRow(label: "Latitude", value: String(format: "%.6f°", telemetry.lat))
-                            DataRow(label: "Longitude", value: String(format: "%.6f°", telemetry.lon))
-                            DataRow(label: "Altitude", value: String(format: "%.1f m", telemetry.alt))
-                            DataRow(label: "Satellites", value: "\(telemetry.num_sats)")
-                            DataRow(label: "GPS Fix", value: telemetry.gps_fix)
-                            DataRow(label: "Baro Alt", value: String(format: "%.1f m", telemetry.baro_alt))
+            
+            // Telemetry data display
+            ScrollView {
+                if selectedDeviceTab == nil && presenter.getAvailableDeviceIDs().count > 1 {
+                    // Show data for all devices
+                    ForEach(presenter.getAvailableDeviceIDs(), id: \.self) { deviceID in
+                        if let telemetry = presenter.getTelemetryData(for: deviceID) {
+                            VStack(alignment: .leading) {                                
+                                DeviceTelemetryView(telemetry: telemetry)
+                                    .padding()
+                                
+                                Divider()
+                            }
                         }
-                        .padding(.vertical, 6)
                     }
-                    
-//                    GroupBox(label: Label("IMU Data", systemImage: "gyroscope")) {
-//                        VStack(alignment: .leading, spacing: 4) {
-//                            Text("Accelerometer (g)")
-//                                .font(.subheadline)
-//                                .foregroundColor(.secondary)
-//                            HStack {
-//                                DataColumn(label: "X", value: String(format: "%.2f", telemetry.ism_axel_x))
-//                                DataColumn(label: "Y", value: String(format: "%.2f", telemetry.ism_axel_y))
-//                                DataColumn(label: "Z", value: String(format: "%.2f", telemetry.ism_axel_z))
-//                            }
-//
-//                            Text("Gyroscope (deg/s)")
-//                                .font(.subheadline)
-//                                .foregroundColor(.secondary)
-//                                .padding(.top, 8)
-//                            HStack {
-//                                DataColumn(label: "X", value: String(format: "%.2f", telemetry.ism_gyro_x))
-//                                DataColumn(label: "Y", value: String(format: "%.2f", telemetry.ism_gyro_y))
-//                                DataColumn(label: "Z", value: String(format: "%.2f", telemetry.ism_gyro_z))
-//                            }
-//                        }
-//                        .padding(.vertical, 6)
-//                    }
-                    
-                    GroupBox(label: Label("System", systemImage: "clock")) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            DataRow(label: "Boot Time", value: "\(telemetry.time_since_boot) ms")
-                            DataRow(label: "Message #", value: "\(telemetry.msg_num)")
-                            DataRow(label: "Date", value: "\(telemetry.gps_time.day)/\(telemetry.gps_time.month)/\(telemetry.gps_time.year)")
-                            DataRow(label: "Time", value: String(format: "%02d:%02d:%02d",
-                                                                telemetry.gps_time.hour,
-                                                                telemetry.gps_time.min,
-                                                                telemetry.gps_time.sec))
-                        }
-                        .padding(.vertical, 6)
+                } else if let deviceID = selectedDeviceTab, let telemetry = presenter.getTelemetryData(for: deviceID) {
+                    // Show data for selected device
+                    DeviceTelemetryView(telemetry: telemetry)
+                        .padding()
+                } else if let telemetry = presenter.telemetryData {
+                    // Fallback to single device mode
+                    DeviceTelemetryView(telemetry: telemetry)
+                        .padding()
+                } else {
+                    // No data available
+                    VStack(spacing: 20) {
+                        Image(systemName: "waveform.badge.exclamationmark")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                        Text("No data available")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        Text("Connect to Rocket Tracker to view telemetry data")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding()
                 }
-                .padding()
-            } else {
-                VStack(spacing: 20) {
-                    Image(systemName: "waveform.badge.exclamationmark")
-                        .font(.system(size: 40))
-                        .foregroundColor(.gray)
-                    Text("No data available")
-                        .font(.headline)
-                        .foregroundColor(.gray)
-                    Text("Connect to Rocket Tracker to view telemetry data")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
             }
         }
         .navigationTitle("Rocket Telemetry")
@@ -113,8 +106,6 @@ struct TelemetryDataView: View {
     }
 }
 
-// Update the TelemetryLogBrowser with this improved version:
-
 struct TelemetryLogBrowser: View {
     @ObservedObject var presenter: MainPresenter
     @State private var selectedDate: Date?
@@ -124,42 +115,82 @@ struct TelemetryLogBrowser: View {
     @State private var isLoading = false
     @State private var showingDeleteAlert = false
     @State private var dateToDelete: Date?
+    @State private var selectedDeviceFilter: UInt32?
+    @State private var availableDevices: [UInt32] = []
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
-            ZStack {
-                List {
-                    if logDates.isEmpty {
-                        Text("No telemetry data recorded")
-                            .foregroundColor(.gray)
-                    } else {
-                        ForEach(logDates, id: \.self) { date in
+            VStack {
+                // Device filter selector
+                if availableDevices.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
                             Button(action: {
-                                loadRecordsForDate(date)
+                                selectedDeviceFilter = nil
+                                refreshLogDates()
                             }) {
-                                HStack {
-                                    Image(systemName: "calendar")
-                                    Text(dateFormatter.string(from: date))
+                                Text("All Devices")
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background((selectedDeviceFilter == nil) ? Color.blue : Color.gray.opacity(0.2))
+                                    .cornerRadius(16)
+                                    .foregroundColor((selectedDeviceFilter == nil) ? .white : .primary)
+                            }
+                            
+                            ForEach(availableDevices, id: \.self) { deviceID in
+                                Button(action: {
+                                    selectedDeviceFilter = deviceID
+                                    refreshLogDates()
+                                }) {
+                                    Text("Device \(deviceID)")
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background((selectedDeviceFilter == deviceID) ? Color.blue : Color.gray.opacity(0.2))
+                                        .cornerRadius(16)
+                                        .foregroundColor((selectedDeviceFilter == deviceID) ? .white : .primary)
                                 }
                             }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    dateToDelete = date
-                                    showingDeleteAlert = true
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.vertical, 8)
+                    .background(Color(UIColor.secondarySystemBackground))
+                }
+                
+                ZStack {
+                    List {
+                        if logDates.isEmpty {
+                            Text("No telemetry data recorded")
+                                .foregroundColor(.gray)
+                        } else {
+                            ForEach(logDates, id: \.self) { date in
+                                Button(action: {
+                                    loadRecordsForDate(date)
+                                }) {
+                                    HStack {
+                                        Image(systemName: "calendar")
+                                        Text(dateFormatter.string(from: date))
+                                    }
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        dateToDelete = date
+                                        showingDeleteAlert = true
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                
-                if isLoading {
-                    ProgressView("Loading records...")
-                        .padding()
-                        .background(Color(UIColor.systemBackground).opacity(0.8))
-                        .cornerRadius(8)
+                    
+                    if isLoading {
+                        ProgressView("Loading records...")
+                            .padding()
+                            .background(Color(UIColor.systemBackground).opacity(0.8))
+                            .cornerRadius(8)
+                    }
                 }
             }
             .navigationTitle("Telemetry History")
@@ -180,7 +211,11 @@ struct TelemetryLogBrowser: View {
             }
             .sheet(isPresented: $showingDataDetail) {
                 if let date = selectedDate {
-                    TelemetryLogDetailView(date: date, records: recordsForDate)
+                    TelemetryLogDetailView(
+                        date: date, 
+                        records: recordsForDate,
+                        deviceFilter: selectedDeviceFilter
+                    )
                 }
             }
             .alert("Delete Records", isPresented: $showingDeleteAlert, presenting: dateToDelete) { date in
@@ -189,10 +224,22 @@ struct TelemetryLogBrowser: View {
                     performDelete(for: date)
                 }
             } message: { date in
-                Text("Are you sure you want to delete all telemetry records for \(dateFormatter.string(from: date))?")
+                let deviceText = selectedDeviceFilter != nil ? " for Device \(selectedDeviceFilter!)" : ""
+                Text("Are you sure you want to delete all telemetry records\(deviceText) for \(dateFormatter.string(from: date))?")
             }
             .onAppear {
+                loadAvailableDevices()
                 refreshLogDates()
+            }
+        }
+    }
+    
+    private func loadAvailableDevices() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let devices = presenter.getAllDeviceIDs()
+            
+            DispatchQueue.main.async {
+                self.availableDevices = devices
             }
         }
     }
@@ -202,7 +249,7 @@ struct TelemetryLogBrowser: View {
         
         // Delete in background to avoid UI freezing
         DispatchQueue.global(qos: .userInitiated).async {
-            self.presenter.deleteRecordsForDate(date)
+            self.presenter.deleteRecordsForDate(date, deviceID: selectedDeviceFilter)
             
             // Refresh the list on the main thread
             DispatchQueue.main.async {
@@ -220,7 +267,11 @@ struct TelemetryLogBrowser: View {
             let startOfDay = calendar.startOfDay(for: date)
             let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
             
-            let records = presenter.getTelemetryRecords(from: startOfDay, to: endOfDay)
+            let records = presenter.getTelemetryRecords(
+                deviceID: selectedDeviceFilter, 
+                from: startOfDay, 
+                to: endOfDay
+            )
             
             // Return to main thread for UI updates
             DispatchQueue.main.async {
@@ -231,44 +282,12 @@ struct TelemetryLogBrowser: View {
             }
         }
     }
-
-    private func deleteRecordsForDate(_ date: Date) {
-        // Show confirmation alert
-        let dateString = dateFormatter.string(from: date)
-        let alert = UIAlertController(
-            title: "Delete Records",
-            message: "Are you sure you want to delete all telemetry records for \(dateString)?",
-            preferredStyle: .alert
-        )
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
-            // Show loading indicator
-            isLoading = true
-            
-            // Delete in background to avoid UI freezing
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.presenter.deleteRecordsForDate(date)
-                
-                // Refresh the list on the main thread
-                DispatchQueue.main.async {
-                    self.refreshLogDates()
-                }
-            }
-        })
-        
-        // Present the alert
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController {
-            rootViewController.present(alert, animated: true)
-        }
-    }
     
     private func refreshLogDates() {
         isLoading = true
         
         DispatchQueue.global(qos: .userInitiated).async {
-            let dates = presenter.getAvailableDates()
+            let dates = presenter.getAvailableDates(forDeviceID: selectedDeviceFilter)
             
             DispatchQueue.main.async {
                 logDates = dates
@@ -287,8 +306,13 @@ struct TelemetryLogBrowser: View {
 struct TelemetryLogDetailView: View {
     let date: Date
     let records: [NSManagedObject]
+    var deviceFilter: UInt32?
     @Environment(\.dismiss) private var dismiss
     @State private var selectedSegment = 0
+    @State private var deviceRecords: [UInt32: [NSManagedObject]] = [:]
+    @State private var devices: [UInt32] = []
+    @State private var isExporting = false
+    @State private var csvURL: URL?
     
     var body: some View {
         NavigationView {
@@ -313,55 +337,57 @@ struct TelemetryLogDetailView: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
                 
+                // Device tabs if we have multiple devices and no filter
+                if deviceFilter == nil && devices.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            Button(action: {
+                                selectedSegment = 0
+                            }) {
+                                Text("All")
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(selectedSegment == 0 ? Color.blue : Color.gray.opacity(0.2))
+                                    .cornerRadius(16)
+                                    .foregroundColor(selectedSegment == 0 ? .white : .primary)
+                            }
+                            
+                            ForEach(Array(devices.enumerated()), id: \.element) { index, device in
+                                Button(action: {
+                                    selectedSegment = index + 1
+                                }) {
+                                    Text("Device \(device)")
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(selectedSegment == index + 1 ? Color.blue : Color.gray.opacity(0.2))
+                                        .cornerRadius(16)
+                                        .foregroundColor(selectedSegment == index + 1 ? .white : .primary)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.vertical, 8)
+                }
+                
                 Divider()
                 
                 // Record list
                 List {
-                    ForEach(0..<records.count, id: \.self) { index in
-                        let record = records[index]
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("Record #\(record.value(forKey: "msgNum") as? Int32 ?? Int32(index))")
-                                    .font(.headline)
-                                Spacer()
-                                if let timestamp = record.value(forKey: "timestamp") as? Date {
-                                    Text(timeFormatter.string(from: timestamp))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            HStack(spacing: 8) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Location:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(String(format: "%.6f", record.value(forKey: "lat") as? Double ?? 0)), \(String(format: "%.6f", record.value(forKey: "lon") as? Double ?? 0))")
-                                        .font(.caption2)
-                                }
-                                
-                                Spacer()
-                                
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    Text("Altitude:")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(String(format: "%.1f", record.value(forKey: "alt") as? Double ?? 0)) m")
-                                        .font(.caption2)
-                                }
-                            }
-                            
-                            HStack {
-                                Label("\(record.value(forKey: "numSats") as? Int16 ?? 0) satellites", systemImage: "antenna.radiowaves.left.and.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text(record.value(forKey: "gpsFix") as? String ?? "Unknown Fix")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                    // Show records based on selected segment/tab
+                    if selectedSegment == 0 || devices.count <= 1 {
+                        // Show all records
+                        ForEach(0..<records.count, id: \.self) { index in
+                            recordView(for: records[index])
+                        }
+                    } else if selectedSegment > 0 && selectedSegment <= devices.count {
+                        // Show records for the selected device
+                        let deviceID = devices[selectedSegment - 1]
+                        if let deviceRecords = deviceRecords[deviceID] {
+                            ForEach(0..<deviceRecords.count, id: \.self) { index in
+                                recordView(for: deviceRecords[index])
                             }
                         }
-                        .padding(.vertical, 4)
                     }
                 }
             }
@@ -373,8 +399,168 @@ struct TelemetryLogDetailView: View {
                         dismiss()
                     }
                 }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        // Export file first
+                        _ = exportToCSV()
+                    }) {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+            // .sheet(isPresented: $isExporting) {
+            //     if let url = self.csvURL {
+            //         DocumentPicker(fileURL: url)
+            //     } else {
+            //         Text("No file to export")
+            //     }
+            // }
+            .onAppear {
+                organizeRecordsByDevice()
             }
         }
+    }
+
+    private func exportToCSV() -> URL? {
+        // Create CSV content
+        var csvString = "Device ID,Message #,Timestamp,Latitude,Longitude,Altitude,Satellites,GPS Fix\n"
+        
+        for record in records {
+            let deviceID = record.value(forKey: "deviceID") as? Int32 ?? 0
+            let msgNum = record.value(forKey: "msgNum") as? Int32 ?? 0
+            let timestamp = record.value(forKey: "timestamp") as? Date ?? Date()
+            let lat = record.value(forKey: "lat") as? Double ?? 0
+            let lon = record.value(forKey: "lon") as? Double ?? 0
+            let alt = record.value(forKey: "alt") as? Double ?? 0
+            let numSats = record.value(forKey: "numSats") as? Int16 ?? 0
+            let gpsFix = record.value(forKey: "gpsFix") as? String ?? "Unknown"
+            
+            // Format timestamp
+            let formattedDate = ISO8601DateFormatter().string(from: timestamp)
+            
+            // Add line to CSV
+            csvString.append("\(deviceID),\(msgNum),\(formattedDate),\(lat),\(lon),\(alt),\(numSats),\"\(gpsFix)\"\n")
+        }
+
+        let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+
+        // Create the file URL
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let fileName = "RocketTelemetry-\(timestamp).csv"
+        let fileURL = docsDir.appendingPathComponent(fileName)
+        
+        print("Trying to write CSV to: \(fileURL.path)")
+
+        // Write to file
+        do {
+            try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
+            print("CSV file created at: \(fileURL)")
+
+            DispatchQueue.main.async {
+                // Create and present the document picker directly
+                let picker = UIDocumentPickerViewController(forExporting: [fileURL])
+                picker.allowsMultipleSelection = false
+                
+                // Get the current UIViewController to present from
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                let rootVC = windowScene.windows.first?.rootViewController {
+                    // Find the top-most presented controller
+                    var topController = rootVC
+                    while let presentedController = topController.presentedViewController {
+                        topController = presentedController
+                    }
+                    
+                    print("Presenting document picker directly")
+                    topController.present(picker, animated: true)
+                } else {
+                    print("Failed to find a view controller to present from")
+                }
+            }
+
+            return fileURL
+            
+        } catch {
+            print("Error writing CSV file: \(error)")
+            return nil
+        }
+    }
+    
+    private func organizeRecordsByDevice() {
+        var tempDeviceRecords: [UInt32: [NSManagedObject]] = [:]
+        var uniqueDevices: Set<UInt32> = []
+        
+        for record in records {
+            if let deviceID = record.value(forKey: "deviceID") as? Int32 {
+                let deviceIDUInt32 = UInt32(deviceID)
+                uniqueDevices.insert(deviceIDUInt32)
+                
+                if tempDeviceRecords[deviceIDUInt32] == nil {
+                    tempDeviceRecords[deviceIDUInt32] = []
+                }
+                
+                tempDeviceRecords[deviceIDUInt32]?.append(record)
+            }
+        }
+        
+        self.deviceRecords = tempDeviceRecords
+        self.devices = Array(uniqueDevices).sorted()
+    }
+    
+    @ViewBuilder
+    private func recordView(for record: NSManagedObject) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                // Show device ID badge
+                if let deviceID = record.value(forKey: "deviceID") as? Int32 {
+                    Text("Device \(deviceID)")
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.2))
+                        .cornerRadius(4)
+                }
+                
+                Text("MSG #\(record.value(forKey: "msgNum") as? Int32 ?? 0)")
+                    .font(.headline)
+                Spacer()
+                if let timestamp = record.value(forKey: "timestamp") as? Date {
+                    Text(timeFormatter.string(from: timestamp))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Location:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("\(String(format: "%.6f", record.value(forKey: "lat") as? Double ?? 0)), \(String(format: "%.6f", record.value(forKey: "lon") as? Double ?? 0))")
+                        .font(.caption2)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Altitude:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("\(String(format: "%.1f", record.value(forKey: "alt") as? Double ?? 0)) m")
+                        .font(.caption2)
+                }
+            }
+            
+            HStack {
+                Label("\(record.value(forKey: "numSats") as? Int16 ?? 0) satellites", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(record.value(forKey: "gpsFix") as? String ?? "Unknown Fix")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
     }
     
     private var dateFormatter: DateFormatter {
@@ -390,67 +576,87 @@ struct TelemetryLogDetailView: View {
     }
 }
 
-struct TelemetryDetailView: View {
-    let date: Date
-    let records: [TelemetryRecord]
-    @Environment(\.dismiss) private var dismiss
+// Extract individual device telemetry view for reuse
+struct DeviceTelemetryView: View {
+    let telemetry: TelemetryData
     
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(records) { record in
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text("Record #\(record.msgNum)")
-                                .font(.headline)
-                            Spacer()
-                            if let timestamp = record.timestamp {
-                                Text(timeFormatter.string(from: timestamp))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        Text("Location: \(String(format: "%.6f", record.lat)), \(String(format: "%.6f", record.lon))")
-                            .font(.caption)
-                        
-                        Text("Altitude: \(String(format: "%.1f", record.alt)) m")
-                            .font(.caption)
-                        
-                        Text("Satellites: \(record.numSats)")
-                            .font(.caption)
-                    }
-                    .padding(.vertical, 4)
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            GroupBox(label: Label("Device \(telemetry.deviceID)", systemImage: "antenna.radiowaves.left.and.right")) {
+                Text("Device ID: \(telemetry.deviceID)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
-            .navigationTitle(dateFormatter.string(from: date))
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        dismiss()
-                    }
+            
+            GroupBox(label: Label("GPS Data", systemImage: "location.fill")) {
+                VStack(alignment: .leading, spacing: 4) {
+                    DataRow(label: "Latitude", value: String(format: "%.6f°", telemetry.lat))
+                    DataRow(label: "Longitude", value: String(format: "%.6f°", telemetry.lon))
+                    DataRow(label: "Altitude", value: String(format: "%.1f m", telemetry.alt))
+                    DataRow(label: "Satellites", value: "\(telemetry.num_sats)")
+                    DataRow(label: "GPS Fix", value: telemetry.gps_fix)
+                    DataRow(label: "Baro Alt", value: String(format: "%.1f m", telemetry.baro_alt))
                 }
+                .padding(.vertical, 6)
+            }
+            
+            GroupBox(label: Label("System", systemImage: "clock")) {
+                VStack(alignment: .leading, spacing: 4) {
+                    DataRow(label: "Boot Time", value: "\(telemetry.time_since_boot) ms")
+                    DataRow(label: "Message #", value: "\(telemetry.msg_num)")
+                    DataRow(label: "Date", value: "\(telemetry.gps_time.day)/\(telemetry.gps_time.month)/\(telemetry.gps_time.year)")
+                    DataRow(label: "Time", value: String(format: "%02d:%02d:%02d",
+                                                         telemetry.gps_time.hour,
+                                                         telemetry.gps_time.min,
+                                                         telemetry.gps_time.sec))
+                }
+                .padding(.vertical, 6)
             }
         }
     }
+}
+
+struct DocumentPicker: UIViewControllerRepresentable {
+    var fileURL: URL
+    @Environment(\.presentationMode) private var presentationMode
     
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        // Create a document picker for exporting the file
+        let picker = UIDocumentPickerViewController(forExporting: [fileURL])
+        picker.delegate = context.coordinator
+        return picker
     }
     
-    private var timeFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .medium
-        return formatter
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let parent: DocumentPicker
+        
+        init(_ parent: DocumentPicker) {
+            self.parent = parent
+        }
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            // File was successfully exported
+            print("Document exported to: \(urls)")
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+        
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            // User cancelled the operation
+            print("Document export cancelled")
+            parent.presentationMode.wrappedValue.dismiss()
+        }
     }
 }
 
-
-
 #Preview {
-    let service = BluetoothService()
-    let presenter = MainPresenter(bluetoothService: service)
+    let bluetoothService = BluetoothService()
+    let locationService = LocationService()
+    let presenter = MainPresenter(bluetoothService: bluetoothService, locationService: locationService)
     return TelemetryDataView(presenter: presenter)
 }

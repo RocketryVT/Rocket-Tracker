@@ -31,6 +31,7 @@ class TelemetryDataManager {
 
 
         record.timestamp = Date()
+        record.deviceID = Int32(data.deviceID)
         record.lat = data.lat
         record.lon = data.lon
         record.alt = data.alt
@@ -54,14 +55,18 @@ class TelemetryDataManager {
         }
     }
     
-    // Get all telemetry records for a specific date range
-    func getTelemetryRecords(from startDate: Date? = nil, to endDate: Date? = nil) -> [TelemetryRecord] {
+    // Get all telemetry records for a specific device and date range
+    func getTelemetryRecords(deviceID: UInt32? = nil, from startDate: Date? = nil, to endDate: Date? = nil) -> [NSManagedObject] {
         let context = persistentContainer.viewContext
-        let fetchRequest = NSFetchRequest<TelemetryRecord>(entityName: "TelemetryRecord")
-
+        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "TelemetryRecord")
         
-        // Add date predicates if specified
+        // Add date and device predicates if specified
         var predicates: [NSPredicate] = []
+        
+        if let deviceID = deviceID {
+            let devicePredicate = NSPredicate(format: "deviceID == %d", Int32(deviceID))
+            predicates.append(devicePredicate)
+        }
         
         if let startDate = startDate {
             let startPredicate = NSPredicate(format: "timestamp >= %@", startDate as NSDate)
@@ -88,10 +93,15 @@ class TelemetryDataManager {
         }
     }
     
-    // Get all available dates that have telemetry records
-    func getAvailableDates() -> [Date] {
+    // Get all available dates that have telemetry records, optionally filtered by deviceID
+    func getAvailableDates(forDeviceID deviceID: UInt32? = nil) -> [Date] {
         let context = persistentContainer.viewContext
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "TelemetryRecord")
+        
+        if let deviceID = deviceID {
+            fetchRequest.predicate = NSPredicate(format: "deviceID == %d", Int32(deviceID))
+        }
+        
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: true)]
         
         do {
@@ -115,6 +125,34 @@ class TelemetryDataManager {
             return []
         }
     }
+
+    // Get all unique device IDs in the database
+    func getAllDeviceIDs() -> [UInt32] {
+        let context = persistentContainer.viewContext
+        
+        // Change the generic type to NSDictionary instead of NSManagedObject
+        let fetchRequest = NSFetchRequest<NSDictionary>(entityName: "TelemetryRecord")
+        
+        // We need to use a distinct result type for unique device IDs
+        fetchRequest.returnsDistinctResults = true
+        fetchRequest.propertiesToFetch = ["deviceID"]
+        fetchRequest.resultType = .dictionaryResultType
+        
+        do {
+            // Now our fetch result type matches our generic type
+            let results = try context.fetch(fetchRequest)
+            let deviceIDs = results.compactMap { result in
+                if let deviceID = result["deviceID"] as? Int32 {
+                    return UInt32(deviceID)
+                }
+                return nil
+            }
+            return deviceIDs
+        } catch {
+            print("Failed to fetch device IDs: \(error)")
+            return []
+        }
+    }
     
     // Delete records older than a specified date
     func deleteRecords(olderThan date: Date) {
@@ -135,7 +173,8 @@ class TelemetryDataManager {
         }
     }
 
-    func deleteRecordsForDate(_ date: Date) {
+    // Delete records for a specific device and date
+    func deleteRecordsForDate(_ date: Date, deviceID: UInt32? = nil) {
         let context = persistentContainer.viewContext
         let calendar = Calendar.current
         
@@ -143,42 +182,33 @@ class TelemetryDataManager {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        print("TelemetryDataManager: Deleting records between \(startOfDay) and \(endOfDay)")
-        
         // Create fetch request with date range predicate
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "TelemetryRecord")
-        fetchRequest.predicate = NSPredicate(
-            format: "timestamp >= %@ AND timestamp < %@", 
-            startOfDay as NSDate, 
-            endOfDay as NSDate
-        )
+        
+        var predicates = [
+            NSPredicate(format: "timestamp >= %@ AND timestamp < %@", startOfDay as NSDate, endOfDay as NSDate)
+        ]
+        
+        if let deviceID = deviceID {
+            predicates.append(NSPredicate(format: "deviceID == %d", Int32(deviceID)))
+        }
+        
+        if predicates.count > 1 {
+            fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        } else {
+            fetchRequest.predicate = predicates.first
+        }
         
         do {
             let dateRecords = try context.fetch(fetchRequest)
             print("Found \(dateRecords.count) records to delete")
-            
-            if dateRecords.isEmpty {
-                print("No records found for this date")
-                return
-            }
             
             for record in dateRecords {
                 context.delete(record)
             }
             
             try context.save()
-            print("Successfully deleted \(dateRecords.count) records")
-            
-            // Force persistent store save
-            if context.hasChanges {
-                do {
-                    try context.save()
-                } catch {
-                    print("Failed to save context after deletion: \(error)")
-                }
-            }
-            print("Saved changes to persistent store")
-            
+            print("Successfully deleted records")
         } catch {
             print("Failed to delete records for date: \(error)")
         }

@@ -126,6 +126,11 @@ struct RKTMiniData: @unchecked Sendable {
     set {_uniqueStorage()._msgNum = newValue}
   }
 
+  var deviceID: UInt32 {
+    get {return _storage._deviceID}
+    set {_uniqueStorage()._deviceID = newValue}
+  }
+
   var lat: Double {
     get {return _storage._lat}
     set {_uniqueStorage()._lat = newValue}
@@ -278,18 +283,20 @@ extension RKTMiniData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "time_since_boot"),
     2: .standard(proto: "msg_num"),
-    3: .same(proto: "lat"),
-    4: .same(proto: "lon"),
-    5: .same(proto: "alt"),
-    6: .standard(proto: "num_sats"),
-    7: .standard(proto: "gps_fix"),
-    8: .standard(proto: "gps_time"),
-    9: .standard(proto: "baro_alt"),
+    3: .standard(proto: "device_id"),
+    4: .same(proto: "lat"),
+    5: .same(proto: "lon"),
+    6: .same(proto: "alt"),
+    7: .standard(proto: "num_sats"),
+    8: .standard(proto: "gps_fix"),
+    9: .standard(proto: "gps_time"),
+    10: .standard(proto: "baro_alt"),
   ]
 
   fileprivate class _StorageClass {
     var _timeSinceBoot: UInt64 = 0
     var _msgNum: UInt32 = 0
+    var _deviceID: UInt32 = 0
     var _lat: Double = 0
     var _lon: Double = 0
     var _alt: Double = 0
@@ -313,6 +320,7 @@ extension RKTMiniData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
     init(copying source: _StorageClass) {
       _timeSinceBoot = source._timeSinceBoot
       _msgNum = source._msgNum
+      _deviceID = source._deviceID
       _lat = source._lat
       _lon = source._lon
       _alt = source._alt
@@ -340,13 +348,14 @@ extension RKTMiniData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularFixed64Field(value: &_storage._timeSinceBoot) }()
         case 2: try { try decoder.decodeSingularFixed32Field(value: &_storage._msgNum) }()
-        case 3: try { try decoder.decodeSingularDoubleField(value: &_storage._lat) }()
-        case 4: try { try decoder.decodeSingularDoubleField(value: &_storage._lon) }()
-        case 5: try { try decoder.decodeSingularDoubleField(value: &_storage._alt) }()
-        case 6: try { try decoder.decodeSingularFixed32Field(value: &_storage._numSats) }()
-        case 7: try { try decoder.decodeSingularEnumField(value: &_storage._gpsFix) }()
-        case 8: try { try decoder.decodeSingularMessageField(value: &_storage._gpsTime) }()
-        case 9: try { try decoder.decodeSingularFloatField(value: &_storage._baroAlt) }()
+        case 3: try { try decoder.decodeSingularUInt32Field(value: &_storage._deviceID) }()
+        case 4: try { try decoder.decodeSingularDoubleField(value: &_storage._lat) }()
+        case 5: try { try decoder.decodeSingularDoubleField(value: &_storage._lon) }()
+        case 6: try { try decoder.decodeSingularDoubleField(value: &_storage._alt) }()
+        case 7: try { try decoder.decodeSingularFixed32Field(value: &_storage._numSats) }()
+        case 8: try { try decoder.decodeSingularEnumField(value: &_storage._gpsFix) }()
+        case 9: try { try decoder.decodeSingularMessageField(value: &_storage._gpsTime) }()
+        case 10: try { try decoder.decodeSingularFloatField(value: &_storage._baroAlt) }()
         default: break
         }
       }
@@ -365,26 +374,29 @@ extension RKTMiniData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
       if _storage._msgNum != 0 {
         try visitor.visitSingularFixed32Field(value: _storage._msgNum, fieldNumber: 2)
       }
+      if _storage._deviceID != 0 {
+        try visitor.visitSingularUInt32Field(value: _storage._deviceID, fieldNumber: 3)
+      }
       if _storage._lat.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._lat, fieldNumber: 3)
+        try visitor.visitSingularDoubleField(value: _storage._lat, fieldNumber: 4)
       }
       if _storage._lon.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._lon, fieldNumber: 4)
+        try visitor.visitSingularDoubleField(value: _storage._lon, fieldNumber: 5)
       }
       if _storage._alt.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._alt, fieldNumber: 5)
+        try visitor.visitSingularDoubleField(value: _storage._alt, fieldNumber: 6)
       }
       if _storage._numSats != 0 {
-        try visitor.visitSingularFixed32Field(value: _storage._numSats, fieldNumber: 6)
+        try visitor.visitSingularFixed32Field(value: _storage._numSats, fieldNumber: 7)
       }
       if _storage._gpsFix != .noFix {
-        try visitor.visitSingularEnumField(value: _storage._gpsFix, fieldNumber: 7)
+        try visitor.visitSingularEnumField(value: _storage._gpsFix, fieldNumber: 8)
       }
       try { if let v = _storage._gpsTime {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
       } }()
       if _storage._baroAlt.bitPattern != 0 {
-        try visitor.visitSingularFloatField(value: _storage._baroAlt, fieldNumber: 9)
+        try visitor.visitSingularFloatField(value: _storage._baroAlt, fieldNumber: 10)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -397,6 +409,7 @@ extension RKTMiniData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
         let rhs_storage = _args.1
         if _storage._timeSinceBoot != rhs_storage._timeSinceBoot {return false}
         if _storage._msgNum != rhs_storage._msgNum {return false}
+        if _storage._deviceID != rhs_storage._deviceID {return false}
         if _storage._lat != rhs_storage._lat {return false}
         if _storage._lon != rhs_storage._lon {return false}
         if _storage._alt != rhs_storage._alt {return false}

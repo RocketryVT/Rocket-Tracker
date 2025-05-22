@@ -169,7 +169,8 @@ struct DeviceSelectorView: View {
 }
 
 #Preview {
-    let service = BluetoothService()
-    let presenter = MainPresenter(bluetoothService: service)
+    let bluetoothService = BluetoothService()
+    let locationService = LocationService()
+    let presenter = MainPresenter(bluetoothService: bluetoothService, locationService: locationService)
     return DeviceSelectorView(presenter: presenter, isPresented: .constant(true))
 }

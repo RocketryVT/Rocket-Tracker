@@ -40,9 +40,9 @@ class BluetoothService: NSObject, BluetoothServiceProtocol, ObservableObject {
     
     // UUIDs
 //    private let serviceUUID = CBUUID(string: "10000000-0000-0000-0000-000000000000")
-//    private let dataCharUUID = CBUUID(string: "00000000-0000-0000-0000-000000000001")
+    private let dataCharUUID = CBUUID(string: "00000000-0000-0000-0000-000000000001")
     private let serviceUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001000003412")
-    private let dataCharUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001001003412")
+//    private let dataCharUUID = CBUUID(string: "0000FB34-9B5F-8000-0080-001001003412")
     
     // MARK: - Initialization
     override init() {
@@ -227,6 +227,7 @@ extension BluetoothService: CBPeripheralDelegate {
             
             // Convert the protobuf model to your app's data model
             let appTelemetry = TelemetryData(
+                deviceID: UInt32(telemetry.deviceID),
                 time_since_boot: Int(telemetry.timeSinceBoot),
                 msg_num: Int(telemetry.msgNum),
                 lat: telemetry.lat,

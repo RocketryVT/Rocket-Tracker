@@ -1,6 +1,7 @@
 import Foundation
 
 struct TelemetryData: Codable {
+    let deviceID: UInt32
     let time_since_boot: Int
     let msg_num: Int
     let lat: Double
