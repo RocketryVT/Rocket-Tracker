@@ -1,6 +1,7 @@
 import Foundation
 import CoreData
 import Combine
+import GRDB
 
 class TelemetryDataManager {
     private let persistentContainer: NSPersistentContainer
@@ -32,20 +33,20 @@ class TelemetryDataManager {
 
         record.timestamp = Date()
         record.deviceID = Int32(data.deviceID)
-        record.lat = data.lat
-        record.lon = data.lon
-        record.alt = data.alt
-        record.numSats = Int16(data.num_sats)
-        record.gpsFix = data.gps_fix
-        record.baroAlt = data.baro_alt
+        record.gps_lat = data.gps.lat
+        record.gps_lon = data.gps.lon
+        record.gps_alt = data.gps.alt
+        record.gps_num_sats = Int16(data.gps.num_sats)
+        record.gps_fix = data.gps.fix
+        record.baro_alt = data.barometer.altitude
         record.timeSinceBoot = Int32(data.time_since_boot)
         record.msgNum = Int32(data.msg_num)
-        record.year = Int16(data.gps_time.year)
-        record.month = Int16(data.gps_time.month)
-        record.day = Int16(data.gps_time.day)
-        record.hour = Int16(data.gps_time.hour)
-        record.minute = Int16(data.gps_time.min)
-        record.second = Int16(data.gps_time.sec)
+        record.gps_utc_year = Int16(data.gps.time.year)
+        record.gps_utc_month = Int16(data.gps.time.month)
+        record.gps_utc_day = Int16(data.gps.time.day)
+        record.gps_utc_hour = Int16(data.gps.time.hour)
+        record.gps_utc_min = Int16(data.gps.time.min)
+        record.gps_utc_sec = Int16(data.gps.time.sec)
         
         // Save the context
         do {
