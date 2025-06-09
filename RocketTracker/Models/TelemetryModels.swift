@@ -4,14 +4,21 @@ struct TelemetryData: Codable {
     let deviceID: UInt32
     let time_since_boot: Int
     let msg_num: Int
+    let gps: GPSData
+    let ism_primary: AccelGyroData
+    let ism_secondary: AccelGyroData
+    let lsm: AccelGyroData
+    let adxl: AccelerometerData
+    let barometer: BarometerData
+}
+
+struct GPSData : Codable {
+    let alt: Double
+    let fix: String
     let lat: Double
     let lon: Double
-    let alt: Double
     let num_sats: Int
-    let gps_fix: String
-    let gps_time: UTCTime
-    let baro_alt: Double
-    // Add other properties as needed
+    let time: UTCTime
 }
 
 struct UTCTime: Codable {
@@ -25,6 +32,27 @@ struct UTCTime: Codable {
     let sec: Int
     let nanos: Int
     let valid: Int
+}
+
+struct AccelGyroData: Codable {
+    let accelerometer: AccelerometerData
+    let gyroscope: GyroscopeData
+}
+
+struct AccelerometerData: Codable {
+    let x: Double
+    let y: Double
+    let z: Double
+}
+
+struct GyroscopeData: Codable {
+    let x: Double
+    let y: Double
+    let z: Double
+}
+
+struct BarometerData: Codable {
+    let altitude: Double
 }
 
 struct ReceivedMessage: Identifiable, Hashable {

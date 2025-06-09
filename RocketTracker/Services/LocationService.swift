@@ -6,8 +6,12 @@
 //
 
 import CoreLocation
+import Combine
 
 protocol LocationServiceProtocol {
+    var userLocation: CLLocationCoordinate2D? { get }
+    var userLocationPublisher: AnyPublisher<CLLocationCoordinate2D?, Never> { get }
+
     func setupLocationServices()
     func startUpdatingLocation()
     func stopUpdatingLocation()
@@ -17,9 +21,7 @@ class LocationService: NSObject, LocationServiceProtocol, ObservableObject, CLLo
     private var locationManager: CLLocationManager
     
     @Published var userLocation: CLLocationCoordinate2D?
-    @Published var headingToRocket: Double?
     @Published var deviceHeading: Double = 0
-    @Published var relativeHeadingToRocket: Double?
     
     func setupLocationServices() {
         locationManager.delegate = self
@@ -29,9 +31,14 @@ class LocationService: NSObject, LocationServiceProtocol, ObservableObject, CLLo
         locationManager.activityType = .otherNavigation
         locationManager.pausesLocationUpdatesAutomatically = true
     }
+
+    var userLocationPublisher: AnyPublisher<CLLocationCoordinate2D?, Never> {
+        return $userLocation.eraseToAnyPublisher()
+    }
     
     func startUpdatingLocation() {
-        locationManager.startMonitoringSignificantLocationChanges()
+//        locationManager.startMonitoringSignificantLocationChanges()
+        locationManager.startUpdatingLocation()
         locationManager.startUpdatingHeading()
     }
     

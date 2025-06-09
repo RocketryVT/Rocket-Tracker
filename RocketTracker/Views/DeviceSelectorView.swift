@@ -59,7 +59,7 @@ struct DeviceSelectorView: View {
                 }
             }
             .onAppear {
-                presenter.startScanning()
+                // presenter.startScanning()
             }
             .onDisappear {
                 presenter.stopScanning()
@@ -68,9 +68,10 @@ struct DeviceSelectorView: View {
     
     // Filter devices to only show our target device
     private var filteredDevices: [(peripheral: CBPeripheral, rssi: NSNumber)] {
-        return presenter.getDiscoveredDevices().filter {
-            $0.peripheral.name?.contains(deviceName) ?? false
-        }
+        return presenter.getDiscoveredDevices()
+        // return presenter.getDiscoveredDevices().filter {
+        //     $0.peripheral.name?.contains(deviceName) ?? false
+        // }
     }
     
     // Empty state when no devices found

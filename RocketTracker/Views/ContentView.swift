@@ -39,31 +39,16 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 // Header with connection status
                 connectionHeader
-
-                if presenter.getAvailableDeviceIDs().count > 1 {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(presenter.getAvailableDeviceIDs(), id: \.self) { deviceID in
-                                let isSelected = presenter.selectedDeviceID == deviceID
-                                let deviceColor = getDeviceColor(for: deviceID)
-                                let backgroundColor = isSelected ? deviceColor : Color.gray.opacity(0.2)
-                                let textColor = isSelected ? Color.white : Color.primary
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
-
                 mapSection(geometry)
                 TelemetryDataView(presenter: presenter)
-
+                
                 // // Adapt layout based on size class (horizontal compact vs regular)
                 // if geometry.size.width > 500 && geometry.size.height > 500 {
                 //     // Wide layout for iPad/large screens - side by side
                 //     HStack(alignment: .top) {
                 //         mapSection(geometry)
                 //             .frame(width: geometry.size.width * 0.6)
-                        
+                
                 //         TelemetryDataView(presenter: presenter)
                 //             .frame(width: geometry.size.width * 0.4)
                 //     }
@@ -72,8 +57,6 @@ struct ContentView: View {
                 //     mapSection(geometry)
                 //     TelemetryDataView(presenter: presenter)
                 // }
-                
-                // Delete all the commented out code here - it's causing confusion
             }
             .navigationTitle("Rocket Tracker")
             .toolbar {
@@ -130,42 +113,22 @@ struct ContentView: View {
         Group {
             if let telemetry = presenter.telemetryData {
                 ZStack(alignment: .topTrailing) {
-                    mapView(for: telemetry, presenter: presenter)
+                    MapView(for: nil, for: telemetry, presenter: presenter)
                          .frame(height: min(300, geometry.size.height * 0.5))
-                    
-//                    if presenter.headingToRocket != nil {
-//                        CompassView(
-//                            headingToRocket: presenter.headingToRocket,
-//                            deviceHeading: presenter.deviceHeading,
-//                            relativeHeadingToRocket: presenter.relativeHeadingToRocket,
-//                            distance: calculateDistance(
-//                                from: presenter.userLocation,
-//                                to: CLLocationCoordinate2D(latitude: telemetry.lat, longitude: telemetry.lon)
-//                            )
-//                        )
-//                        .padding(8)
-//                    }
+                         .padding(8)
+                }
+            } else if let userLocation = presenter.userLocation {
+                ZStack(alignment: .topTrailing) {
+                    MapView(for: userLocation, for: nil, presenter: presenter)
+                         .frame(height: min(300, geometry.size.height * 0.5))
+                         .padding(8)
                 }
             } else {
-                // Placeholder view when no telemetry is available
-                VStack {
-                    Text("No telemetry data available")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                        .padding()
-                    
-                    Image(systemName: "antenna.radiowaves.left.and.right.slash")
-                        .font(.system(size: 50))
-                        .foregroundColor(.secondary)
-                        .padding()
-                    
-                    Text("Connect to your rocket to view real-time data")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding()
+                ZStack(alignment: .topTrailing) {
+                    MapView(for: nil, for: nil, presenter: presenter)
+                        .frame(height: min(300, geometry.size.height * 0.5))
+                        .padding(8)
                 }
-                .frame(maxWidth: .infinity, maxHeight: min(300, geometry.size.height * 0.4))
             }
         }
     }

@@ -2,7 +2,6 @@ import Foundation
 import Combine
 import CoreBluetooth
 import MapKit
-import CoreData
 
 class MainPresenter: NSObject, ObservableObject {
     // Published properties for the view
@@ -21,6 +20,7 @@ class MainPresenter: NSObject, ObservableObject {
     @Published var headingToRocket: Double?
     @Published var deviceHeading: Double = 0
     @Published var relativeHeadingToRocket: Double?
+    @Published var selectedDate: Date? = nil
 
     var telemetryData: TelemetryData? {
         if let selected = selectedDeviceID {
@@ -52,49 +52,14 @@ class MainPresenter: NSObject, ObservableObject {
 
         setupBindings()
     }
-
-    // Calculate bearing from user to rocket
-    func updateHeadingToSelectedDevice() {
-        if let selected = selectedDeviceID {
-            updateHeadingToDevice(deviceID: selected)
-            
-            // Update the published properties
-            headingToRocket = deviceHeadings[selected]
-            relativeHeadingToRocket = relativeDeviceHeadings[selected]
-        } else if let firstDevice = telemetryDataByDevice.keys.first {
-            updateHeadingToDevice(deviceID: firstDevice)
-            
-            // Update the published properties
-            headingToRocket = deviceHeadings[firstDevice]
-            relativeHeadingToRocket = relativeDeviceHeadings[firstDevice]
-        } else {
-            headingToRocket = nil
-            relativeHeadingToRocket = nil
-        }
-    }
-
-    // Calculate relative heading for specific device
-    func calculateRelativeHeading(for deviceID: UInt32) {
-        guard let heading = deviceHeadings[deviceID] else {
-            relativeDeviceHeadings[deviceID] = nil
-            return
-        }
-        
-        // Calculate the difference between the device heading and direction to rocket
-        var relativeBearing = heading - deviceHeading
-        
-        // Normalize to 0-360 range
-        while relativeBearing < 0 {
-            relativeBearing += 360
-        }
-        relativeBearing = relativeBearing.truncatingRemainder(dividingBy: 360)
-        
-        relativeDeviceHeadings[deviceID] = relativeBearing
-    }
     
     // Get telemetry records for specific device
-    func getTelemetryRecords(deviceID: UInt32? = nil, from startDate: Date? = nil, to endDate: Date? = nil) -> [NSManagedObject] {
-        return dataManager.getTelemetryRecords(deviceID: deviceID, from: startDate, to: endDate)
+    func getAllTelemetryRecords() -> [TelemetryRecord] {
+        return dataManager.getTelemetryRecords()
+    }
+    
+    func getCurrentLocation() -> CLLocationCoordinate2D? {
+        return locationService.userLocation
     }
     
     // Get available dates for specific device
@@ -129,8 +94,8 @@ class MainPresenter: NSObject, ObservableObject {
                 
                 // Update path coordinates for this device
                 let coordinate = CLLocationCoordinate2D(
-                    latitude: data.lat,
-                    longitude: data.lon
+                    latitude: data.gps.lat,
+                    longitude: data.gps.lon
                 )
                 
                 if self.pathCoordinatesByDevice[data.deviceID] == nil {
@@ -147,14 +112,14 @@ class MainPresenter: NSObject, ObservableObject {
                 }
                 
                 // Update headings
-                self.updateHeadingsForAllDevices()
+                // self.updateHeadingsForAllDevices()
                 
                 // Center map on selected device
                 if let selectedID = self.selectedDeviceID,
                 let selectedTelemetry = self.telemetryDataByDevice[selectedID] {
                     self.mapRegion.center = CLLocationCoordinate2D(
-                        latitude: selectedTelemetry.lat,
-                        longitude: selectedTelemetry.lon
+                        latitude: selectedTelemetry.gps.lat,
+                        longitude: selectedTelemetry.gps.lon
                     )
                 }
             }
@@ -162,6 +127,23 @@ class MainPresenter: NSObject, ObservableObject {
         
         bluetoothService.messagesPublisher
             .assign(to: &$receivedMessages)
+
+        locationService.userLocationPublisher
+            .sink { [weak self] location in
+                guard let self = self else { return }
+                
+                // Update our published property
+                self.userLocation = location
+
+//                print("User location updated: \(String(describing: location))")
+                
+                // If we're connected to a device, send the location
+                if self.bluetoothService.isConnected, let location = location {
+//                    print("Sending location update: \(location.latitude), \(location.longitude)")
+                    self.bluetoothService.sendUserLocation(location)
+                }
+            }
+            .store(in: &cancellables)
     }
 
     // Select a specific device to focus on
@@ -172,21 +154,9 @@ class MainPresenter: NSObject, ObservableObject {
         if let deviceID = deviceID, 
         let telemetry = telemetryDataByDevice[deviceID] {
             mapRegion.center = CLLocationCoordinate2D(
-                latitude: telemetry.lat,
-                longitude: telemetry.lon
+                latitude: telemetry.gps.lat,
+                longitude: telemetry.gps.lon
             )
-        }
-        
-        // Update headings
-        updateHeadingsForAllDevices()
-        
-        // Update published properties to reflect selected device
-        if let deviceID = selectedDeviceID {
-            headingToRocket = deviceHeadings[deviceID]
-            relativeHeadingToRocket = relativeDeviceHeadings[deviceID]
-        } else {
-            headingToRocket = deviceHeadings.values.first
-            relativeHeadingToRocket = relativeDeviceHeadings.values.first
         }
     }
 
@@ -211,71 +181,12 @@ class MainPresenter: NSObject, ObservableObject {
     }
 
     // Access methods for telemetry by device
-    func getTelemetryData(for deviceID: UInt32) -> TelemetryData? {
-        return telemetryDataByDevice[deviceID]
+    func getTelemetryRecords(deviceID: UInt32? = nil, from startDate: Date? = nil, to endDate: Date? = nil) -> [TelemetryRecord] {
+        return dataManager.getTelemetryRecords(deviceID: deviceID, from: startDate, to: endDate)
     }
 
     func getPathCoordinates(for deviceID: UInt32) -> [CLLocationCoordinate2D] {
         return pathCoordinatesByDevice[deviceID] ?? []
-    }
-
-    // Calculate bearings for all devices
-    private func updateHeadingsForAllDevices() {
-        // Update for each device
-        for (deviceID, _) in telemetryDataByDevice {
-            updateHeadingToDevice(deviceID: deviceID)
-        }
-    }
-
-        // Calculate bearing to a specific device
-    func updateHeadingToDevice(deviceID: UInt32) {
-        guard let userLocation = userLocation,
-              let telemetry = telemetryDataByDevice[deviceID] else {
-            return
-        }
-        
-        let deviceLocation = CLLocationCoordinate2D(
-            latitude: telemetry.lat,
-            longitude: telemetry.lon
-        )
-        
-        // Calculate bearing between points
-        let lat1 = userLocation.latitude.toRadians()
-        let lon1 = userLocation.longitude.toRadians()
-        let lat2 = deviceLocation.latitude.toRadians()
-        let lon2 = deviceLocation.longitude.toRadians()
-        
-        let dLon = lon2 - lon1
-        
-        let y = sin(dLon) * cos(lat2)
-        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
-        let bearing = atan2(y, x)
-        
-        // Store heading for this device
-        let headingDegrees = (bearing.toDegrees() + 360).truncatingRemainder(dividingBy: 360)
-        deviceHeadings[deviceID] = headingDegrees
-        
-        // Calculate relative bearing
-        calculateRelativeHeading(for: selectedDeviceID ?? telemetryDataByDevice.keys.first!)
-    }
-
-    // Maps to store headings for each device
-    var deviceHeadings: [UInt32: Double] = [:]
-    var relativeDeviceHeadings: [UInt32: Double] = [:]
-    
-    // Compatibility properties for single device mode
-    var selectedDeviceHeading: Double? {
-        if let selected = selectedDeviceID {
-            return deviceHeadings[selected]
-        }
-        return deviceHeadings.values.first
-    }
-    
-    var selectedDeviceRelativeHeading: Double? {
-        if let selected = selectedDeviceID {
-            return relativeDeviceHeadings[selected]
-        }
-        return relativeDeviceHeadings.values.first
     }
     
     // Public methods for the view
@@ -302,10 +213,28 @@ class MainPresenter: NSObject, ObservableObject {
         return (bluetoothService as? BluetoothService)?.discoveredDevices ?? []
     }
 
-    func getTelemetryRecords(from startDate: Date? = nil, to endDate: Date? = nil) -> [NSManagedObject] {
-        let records = dataManager.getTelemetryRecords(from: startDate, to: endDate)
-        print("Retrieved \(records.count) records for date range")
-        return records
+    func getTelemetryData() -> TelemetryData? {
+        return self.telemetryData
+    }
+    
+    func getTelemetryData(for deviceID: UInt32) -> TelemetryData? {
+        return self.telemetryDataByDevice[deviceID]
+    }
+
+    func getRecordsForSelectedDate() -> [TelemetryRecord] {
+        guard let selectedDate = selectedDate else {
+            return []
+        }
+        
+        let deviceID = selectedDeviceID
+        
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: selectedDate)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        
+        return dataManager.getTelemetryRecords(deviceID: deviceID, 
+                                            from: startOfDay, 
+                                            to: endOfDay)
     }
 
     func getAvailableDates() -> [Date] {
@@ -323,18 +252,6 @@ class MainPresenter: NSObject, ObservableObject {
         dataManager.deleteRecordsForDate(date)
     }
 }
-
-
-//extension MainPresenter: CLLocationManagerDelegate {
-//    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-//        updateHeadingToSelectedDevice()
-//    }
-//
-//    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-//        // Recalculate the relative bearing
-//        updateHeadingToSelectedDevice()
-//    }
-//}
 
 extension Double {
     func toRadians() -> Double {

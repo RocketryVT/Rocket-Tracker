@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import CoreData
 
 struct TelemetryDataView: View {
     @ObservedObject var presenter: MainPresenter
@@ -72,21 +71,7 @@ struct TelemetryDataView: View {
                     DeviceTelemetryView(telemetry: telemetry)
                         .padding()
                 } else {
-                    // No data available
-                    VStack(spacing: 20) {
-                        Image(systemName: "waveform.badge.exclamationmark")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray)
-                        Text("No data available")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        Text("Connect to Rocket Tracker to view telemetry data")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding()
+                    
                 }
             }
         }
@@ -109,7 +94,7 @@ struct TelemetryDataView: View {
 struct TelemetryLogBrowser: View {
     @ObservedObject var presenter: MainPresenter
     @State private var selectedDate: Date?
-    @State private var recordsForDate: [NSManagedObject] = []
+    @State private var recordsForDate: [TelemetryRecord] = []
     @State private var showingDataDetail = false
     @State private var logDates: [Date] = []
     @State private var isLoading = false
@@ -305,11 +290,11 @@ struct TelemetryLogBrowser: View {
 
 struct TelemetryLogDetailView: View {
     let date: Date
-    let records: [NSManagedObject]
+    let records: [TelemetryRecord]
     var deviceFilter: UInt32?
     @Environment(\.dismiss) private var dismiss
     @State private var selectedSegment = 0
-    @State private var deviceRecords: [UInt32: [NSManagedObject]] = [:]
+    @State private var deviceRecords: [UInt32: [TelemetryRecord]] = [:]
     @State private var devices: [UInt32] = []
     @State private var isExporting = false
     @State private var csvURL: URL?
@@ -321,16 +306,26 @@ struct TelemetryLogDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(records.count) Records")
                         .font(.headline)
-                    
+                                    
                     if let firstRecord = records.first,
-                       let firstTimestamp = firstRecord.value(forKey: "timestamp") as? Date,
-                       let lastRecord = records.last,
-                       let lastTimestamp = lastRecord.value(forKey: "timestamp") as? Date {
+                    let firstTimestamp = firstRecord.timestamp,
+                    let lastRecord = records.last,
+                    let lastTimestamp = lastRecord.timestamp {
                         
                         Text("From: \(timeFormatter.string(from: firstTimestamp))")
                             .font(.subheadline)
                         Text("To: \(timeFormatter.string(from: lastTimestamp))")
                             .font(.subheadline)
+                    }
+            
+                    if let deviceFilter = deviceFilter {
+                        Text("Filtered by Device \(deviceFilter)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Showing records for all devices")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -423,23 +418,69 @@ struct TelemetryLogDetailView: View {
 
     private func exportToCSV() -> URL? {
         // Create CSV content
-        var csvString = "Device ID,Message #,Timestamp,Latitude,Longitude,Altitude,Satellites,GPS Fix\n"
-        
+        var csvString = "Device ID,Message #,Time Since Boot,Timestamp," +
+            "ADXL Accel X,ADXL Accel Y,ADXL Accel Z," +
+            "ISM Primary Accel X,ISM Primary Accel Y,ISM Primary Accel Z," +
+            "ISM Primary Gyro X,ISM Primary Gyro Y,ISM Primary Gyro Z," +
+            "ISM Secondary Accel X,ISM Secondary Accel Y,ISM Secondary Accel Z," +
+            "ISM Secondary Gyro X,ISM Secondary Gyro Y,ISM Secondary Gyro Z," +
+            "LSM Accel X,LSM Accel Y,LSM Accel Z," +
+            "LSM Gyro X,LSM Gyro Y,LSM Gyro Z," +
+            "Barometer Alt,GPS Alt,GPS Fix,GPS Lat,GPS Lon,GPS Satellites," +
+            "GPS UTC Day,GPS UTC Hour,GPS UTC ITOW,GPS UTC Min,GPS UTC Month," +
+            "GPS UTC Nanos,GPS UTC Sec,GPS UTC Time Accuracy,GPS UTC Valid,GPS UTC Year\n"
+
         for record in records {
-            let deviceID = record.value(forKey: "deviceID") as? Int32 ?? 0
-            let msgNum = record.value(forKey: "msgNum") as? Int32 ?? 0
-            let timestamp = record.value(forKey: "timestamp") as? Date ?? Date()
-            let lat = record.value(forKey: "lat") as? Double ?? 0
-            let lon = record.value(forKey: "lon") as? Double ?? 0
-            let alt = record.value(forKey: "alt") as? Double ?? 0
-            let numSats = record.value(forKey: "numSats") as? Int16 ?? 0
-            let gpsFix = record.value(forKey: "gpsFix") as? String ?? "Unknown"
+        let timestamp = record.timestamp ?? Date()
+        let formattedDate = ISO8601DateFormatter().string(from: timestamp)
+        let gpsFix = record.gps_fix ?? "Unknown"
+        
+        // Format each line with all fields
+        let csvLine = """
+            \(record.deviceID),\
+            \(record.msgNum),\
+            \(record.timeSinceBoot),\
+            \(formattedDate),\
+            \(record.adxl_accel_x),\
+            \(record.adxl_accel_y),\
+            \(record.adxl_accel_z),\
+            \(record.ism_primary_accel_x),\
+            \(record.ism_primary_accel_y),\
+            \(record.ism_primary_accel_z),\
+            \(record.ism_primary_gyro_x),\
+            \(record.ism_primary_gyro_y),\
+            \(record.ism_primary_gyro_z),\
+            \(record.ism_secondary_accel_x),\
+            \(record.ism_secondary_accel_y),\
+            \(record.ism_secondary_accel_z),\
+            \(record.ism_secondary_gyro_x),\
+            \(record.ism_secondary_gyro_y),\
+            \(record.ism_secondary_gyro_z),\
+            \(record.lsm_accel_x),\
+            \(record.lsm_accel_y),\
+            \(record.lsm_accel_z),\
+            \(record.lsm_gyro_x),\
+            \(record.lsm_gyro_y),\
+            \(record.lsm_gyro_z),\
+            \(record.baro_alt),\
+            \(record.gps_alt),\
+            \"\(gpsFix)\",\
+            \(record.gps_lat),\
+            \(record.gps_lon),\
+            \(record.gps_num_sats),\
+            \(record.gps_utc_day),\
+            \(record.gps_utc_hour),\
+            \(record.gps_utc_itow),\
+            \(record.gps_utc_min),\
+            \(record.gps_utc_month),\
+            \(record.gps_utc_nanos),\
+            \(record.gps_utc_sec),\
+            \(record.gps_utc_time_accuracy_estimate_ns),\
+            \(record.gps_utc_valid),\
+            \(record.gps_utc_year)
+            """
             
-            // Format timestamp
-            let formattedDate = ISO8601DateFormatter().string(from: timestamp)
-            
-            // Add line to CSV
-            csvString.append("\(deviceID),\(msgNum),\(formattedDate),\(lat),\(lon),\(alt),\(numSats),\"\(gpsFix)\"\n")
+            csvString.append(csvLine + "\n")
         }
 
         let docsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -456,26 +497,26 @@ struct TelemetryLogDetailView: View {
             try csvString.write(to: fileURL, atomically: true, encoding: .utf8)
             print("CSV file created at: \(fileURL)")
 
-            DispatchQueue.main.async {
-                // Create and present the document picker directly
-                let picker = UIDocumentPickerViewController(forExporting: [fileURL])
-                picker.allowsMultipleSelection = false
+            // DispatchQueue.main.async {
+            //     // Create and present the document picker directly
+            //     let picker = UIDocumentPickerViewController(forExporting: [fileURL])
+            //     picker.allowsMultipleSelection = false
                 
-                // Get the current UIViewController to present from
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                let rootVC = windowScene.windows.first?.rootViewController {
-                    // Find the top-most presented controller
-                    var topController = rootVC
-                    while let presentedController = topController.presentedViewController {
-                        topController = presentedController
-                    }
+            //     // Get the current UIViewController to present from
+            //     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            //     let rootVC = windowScene.windows.first?.rootViewController {
+            //         // Find the top-most presented controller
+            //         var topController = rootVC
+            //         while let presentedController = topController.presentedViewController {
+            //             topController = presentedController
+            //         }
                     
-                    print("Presenting document picker directly")
-                    topController.present(picker, animated: true)
-                } else {
-                    print("Failed to find a view controller to present from")
-                }
-            }
+            //         print("Presenting document picker directly")
+            //         topController.present(picker, animated: true)
+            //     } else {
+            //         print("Failed to find a view controller to present from")
+            //     }
+            // }
 
             return fileURL
             
@@ -486,20 +527,20 @@ struct TelemetryLogDetailView: View {
     }
     
     private func organizeRecordsByDevice() {
-        var tempDeviceRecords: [UInt32: [NSManagedObject]] = [:]
+        var tempDeviceRecords: [UInt32: [TelemetryRecord]] = [:]
         var uniqueDevices: Set<UInt32> = []
         
         for record in records {
-            if let deviceID = record.value(forKey: "deviceID") as? Int32 {
-                let deviceIDUInt32 = UInt32(deviceID)
-                uniqueDevices.insert(deviceIDUInt32)
-                
-                if tempDeviceRecords[deviceIDUInt32] == nil {
-                    tempDeviceRecords[deviceIDUInt32] = []
-                }
-                
-                tempDeviceRecords[deviceIDUInt32]?.append(record)
+            // Change from using KVC to direct property access
+            let deviceID = record.deviceID
+            let deviceIDUInt32 = UInt32(deviceID)
+            uniqueDevices.insert(deviceIDUInt32)
+            
+            if tempDeviceRecords[deviceIDUInt32] == nil {
+                tempDeviceRecords[deviceIDUInt32] = []
             }
+            
+            tempDeviceRecords[deviceIDUInt32]?.append(record)
         }
         
         self.deviceRecords = tempDeviceRecords
@@ -507,23 +548,21 @@ struct TelemetryLogDetailView: View {
     }
     
     @ViewBuilder
-    private func recordView(for record: NSManagedObject) -> some View {
+    private func recordView(for record: TelemetryRecord) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 // Show device ID badge
-                if let deviceID = record.value(forKey: "deviceID") as? Int32 {
-                    Text("Device \(deviceID)")
-                        .font(.caption)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.2))
-                        .cornerRadius(4)
-                }
+                Text("Device \(record.deviceID)")
+                    .font(.caption)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.blue.opacity(0.2))
+                    .cornerRadius(4)
                 
-                Text("MSG #\(record.value(forKey: "msgNum") as? Int32 ?? 0)")
+                Text("MSG #\(record.msgNum)")
                     .font(.headline)
                 Spacer()
-                if let timestamp = record.value(forKey: "timestamp") as? Date {
+                if let timestamp = record.timestamp {
                     Text(timeFormatter.string(from: timestamp))
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -535,7 +574,7 @@ struct TelemetryLogDetailView: View {
                     Text("Location:")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("\(String(format: "%.6f", record.value(forKey: "lat") as? Double ?? 0)), \(String(format: "%.6f", record.value(forKey: "lon") as? Double ?? 0))")
+                    Text("\(String(format: "%.6f", record.gps_lat)), \(String(format: "%.6f", record.gps_lon))")
                         .font(.caption2)
                 }
                 
@@ -545,17 +584,17 @@ struct TelemetryLogDetailView: View {
                     Text("Altitude:")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("\(String(format: "%.1f", record.value(forKey: "alt") as? Double ?? 0)) m")
+                    Text("\(String(format: "%.1f", record.gps_alt)) m")
                         .font(.caption2)
                 }
             }
             
             HStack {
-                Label("\(record.value(forKey: "numSats") as? Int16 ?? 0) satellites", systemImage: "antenna.radiowaves.left.and.right")
+                Label("\(record.gps_num_sats) satellites", systemImage: "antenna.radiowaves.left.and.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
-                Text(record.value(forKey: "gpsFix") as? String ?? "Unknown Fix")
+                Text(record.gps_fix ?? "Unknown Fix")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -590,12 +629,12 @@ struct DeviceTelemetryView: View {
             
             GroupBox(label: Label("GPS Data", systemImage: "location.fill")) {
                 VStack(alignment: .leading, spacing: 4) {
-                    DataRow(label: "Latitude", value: String(format: "%.6f°", telemetry.lat))
-                    DataRow(label: "Longitude", value: String(format: "%.6f°", telemetry.lon))
-                    DataRow(label: "Altitude", value: String(format: "%.1f m", telemetry.alt))
-                    DataRow(label: "Satellites", value: "\(telemetry.num_sats)")
-                    DataRow(label: "GPS Fix", value: telemetry.gps_fix)
-                    DataRow(label: "Baro Alt", value: String(format: "%.1f m", telemetry.baro_alt))
+                    DataRow(label: "Latitude", value: String(format: "%.6f°", telemetry.gps.lat))
+                    DataRow(label: "Longitude", value: String(format: "%.6f°", telemetry.gps.lon))
+                    DataRow(label: "Altitude", value: String(format: "%.1f m", telemetry.gps.alt))
+                    DataRow(label: "Satellites", value: "\(telemetry.gps.num_sats)")
+                    DataRow(label: "GPS Fix", value: telemetry.gps.fix)
+                    DataRow(label: "Baro Alt", value: String(format: "%.1f m", telemetry.barometer.altitude))
                 }
                 .padding(.vertical, 6)
             }
@@ -604,11 +643,11 @@ struct DeviceTelemetryView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     DataRow(label: "Boot Time", value: "\(telemetry.time_since_boot) ms")
                     DataRow(label: "Message #", value: "\(telemetry.msg_num)")
-                    DataRow(label: "Date", value: "\(telemetry.gps_time.day)/\(telemetry.gps_time.month)/\(telemetry.gps_time.year)")
+                    DataRow(label: "Date", value: "\(telemetry.gps.time.day)/\(telemetry.gps.time.month)/\(telemetry.gps.time.year)")
                     DataRow(label: "Time", value: String(format: "%02d:%02d:%02d",
-                                                         telemetry.gps_time.hour,
-                                                         telemetry.gps_time.min,
-                                                         telemetry.gps_time.sec))
+                                                         telemetry.gps.time.hour,
+                                                         telemetry.gps.time.min,
+                                                         telemetry.gps.time.sec))
                 }
                 .padding(.vertical, 6)
             }

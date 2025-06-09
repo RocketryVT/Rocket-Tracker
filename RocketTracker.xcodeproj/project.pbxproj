@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F3347DE32DF4D50E00802698 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F3347DE22DF4D50E00802698 /* GRDB */; };
 		F3BD16C12DDF964100453342 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = F3BD16C02DDF964100453342 /* MapboxMaps */; };
 		F3CA11E02DD5C4FA002933DA /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = F3CA11DF2DD5C4FA002933DA /* SwiftProtobuf */; };
 		F3CA11E22DD5C4FA002933DA /* SwiftProtobufPluginLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = F3CA11E12DD5C4FA002933DA /* SwiftProtobufPluginLibrary */; };
@@ -74,6 +75,7 @@
 				F3BD16C12DDF964100453342 /* MapboxMaps in Frameworks */,
 				F3CA11E22DD5C4FA002933DA /* SwiftProtobufPluginLibrary in Frameworks */,
 				F3CA11E02DD5C4FA002933DA /* SwiftProtobuf in Frameworks */,
+				F3347DE32DF4D50E00802698 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,6 +139,7 @@
 				F3CA11DF2DD5C4FA002933DA /* SwiftProtobuf */,
 				F3CA11E12DD5C4FA002933DA /* SwiftProtobufPluginLibrary */,
 				F3BD16C02DDF964100453342 /* MapboxMaps */,
+				F3347DE22DF4D50E00802698 /* GRDB */,
 			);
 			productName = RocketTracker;
 			productReference = F388090F2DD57B7B00EADF25 /* Rocketry At VT.app */;
@@ -223,6 +226,7 @@
 			packageReferences = (
 				F3CA11DE2DD5C4FA002933DA /* XCRemoteSwiftPackageReference "swift-protobuf" */,
 				F3BD16BF2DDF964100453342 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
+				F3347DE12DF4D50E00802698 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F38809102DD57B7B00EADF25 /* Products */;
@@ -643,6 +647,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		F3347DE12DF4D50E00802698 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		F3BD16BF2DDF964100453342 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
@@ -662,6 +674,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F3347DE22DF4D50E00802698 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F3347DE12DF4D50E00802698 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
 		F3BD16C02DDF964100453342 /* MapboxMaps */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F3BD16BF2DDF964100453342 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
